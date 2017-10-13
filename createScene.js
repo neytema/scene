@@ -13,25 +13,43 @@ class Scene {
     }
 }
 
+const stack = { base: null };
+
+const pushStack = (scene, key) => {
+    let item = stack.base;
+    while (item) {
+        if (item.scene === scene && item.key === key) {
+            return false;
+        }
+        item = item.next;
+    }
+    stack.base = { scene, key, next: stack.base };
+    return true;
+};
+
+const popStack = () => {
+    stack.base = stack.base.next;
+};
+
 const noop = () => null;
 
 const compile = (partials, render, parent) => {
-    const result = {};
+    const mappings = {};
 
     for (const key in partials) {
-        result[key] = () => render(key);
+        mappings[key] = () => render(key);
     }
 
     const pmap = parent && parent.mappings;
     if (pmap) {
         for (const key in pmap) {
-            if (!result[key]) {
-                result[key] = () => render(key);
+            if (!mappings[key]) {
+                mappings[key] = () => render(key);
             }
         }
     }
 
-    return result;
+    return mappings;
 }
 
 const hasPartial = ({ partials }, key) => typeof partials[key] === 'function';
@@ -40,13 +58,26 @@ const lookup = (scene, key) => scene && (
     hasPartial(scene, key) ? scene : lookup(scene.parent, key)
 );
 
-const renderPartial = ({ partials, parent }, key, mappings) => (
-    partials[key](mappings, parent && parent.mappings[key] || noop)
-);
-
 const renderScene = (scene, key = 'render') => {
     const target = lookup(scene, key);
-    return target && renderPartial(target, key, scene.mappings);
+
+    if (target) {
+        if (!pushStack(scene, key)) {
+            const from = stack.base.key;
+            stack.base = null;
+            throw new Error(`Scene render recursion from [${from}] partial`);
+        }
+
+        const { partials: { [key]: partial }, parent } = target;
+        const { mappings } = scene;
+        const result = partial(mappings, parent && parent.mappings[key] || noop);
+
+        popStack();
+
+        return result;
+    }
+
+    return null;
 }
 
 const decorate = ({ partials, parent }, root) => (
