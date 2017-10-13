@@ -4,17 +4,18 @@ const baseScene = createScene({
     render: ({ Layout }) => Layout(),
 
     Layout: ({ Navigation, Content }) => {
-        const nav = Navigation();
-        const con = Content();
+        const navigation = Navigation();
+        const content = Content();
         return [
             'Layout',
-            ...(nav ? [nav] : []),
-            ...(con ? [con] : [])
+            ...(navigation ? [navigation] : []),
+            ...(content ? [content] : [])
         ];
     },
-    
+
     Navigation: ({ NavigationItem }) => {
         const item = NavigationItem();
+        if (!item) return null;
         return ['Navigation', ...(item ? [item] : [])]
     },
 
@@ -51,5 +52,5 @@ const secondPage = createScene(mainScene, {
     Content: () => ['Second page']
 });
 
-console.log(firstPage.render());
-console.log(secondPage.render());
+console.log('/page1', firstPage.render());
+console.log('/page2', secondPage.render());
